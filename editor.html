@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Text Editor</title>
+</head>
+<body>
+    <textarea id="editor" rows="10" cols="50"></textarea>
+
+    <script src="https://cdn.socket.io/4.1.2/socket.io.min.js"></script>
+    <script src="https://cdn.rawgit.com/ottypes/rich-text/8916b18eb6a9aa73dfe27d6652e9e3d4f81e5d6e/dist/ot-rich-text.js"></script>
+    <script src="https://cdn.rawgit.com/share/sharedb/1.1.0/client/sharedb.js"></script>
+    <script>
+        const socket = io({
+            query: {
+                documentId: window.location.pathname.substr(1),
+            },
+        });
+
+        const editor = new ot.Editor(
+            document.getElementById('editor'),
+            [],
+            new ot.TextOperation()
+        );
+
+        socket.on('load', (data) => {
+            const ops = ot.TextOperation.fromJSON(data.ops);
+            editor.apply(ops);
+        });
+
+        editor.on('change', (op, source) => {
+            if (source === undefined) {
+                const operations = editor.operations.toJSON();
+                socket.emit('op', operations);
+            }
+        });
+
+        socket.on('op', (ops) => {
+            const operation = ot.TextOperation.fromJSON(ops);
+            editor.apply(operation);
+        });
+    </script>
+</body>
+</html>
